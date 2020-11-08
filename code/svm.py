@@ -131,8 +131,8 @@ class SVM(object):
             h = cvx.matrix(np.zeros(n))
         else:
             print("Using Slack variables")
-            G = None
-            h = None
+            G = cvx.matrix(np.vstack((np.eye(n) * -1, np.eye(n))))
+            h = cvx.matrix(np.hstack((np.zeros(n), np.ones(n) * self.C)))
 
 
 
