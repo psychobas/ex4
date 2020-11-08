@@ -10,29 +10,38 @@ class SVM(object):
 
     def __init__(self, C=None):
         self.C = C
-        self.__TOL = 1e-5
+        self.__TOL = 1e-4
 
-    def __linearKernel__(self, x1: np.ndarray, x2: np.ndarray) -> float:
+    def __linearKernel__(self, x1: np.ndarray, x2: np.ndarray, pars) -> float:
         # TODO: Implement linear kernel function
         # @x1 and @x2 are vectors
+        print("linear kernel")
         return np.dot(x1, x2)
     #
-    # def __polynomialKernel__(self, x1: np.ndarray, x2: np.ndarray, p: int) -> float:
-    #     # TODO: Implement polynomial kernel function
-    #     # @x1 and @x2 are vectors
-    #     return ???
-    #
+    def __polynomialKernel__(self, x1: np.ndarray, x2: np.ndarray, p: int) -> float:
+        # TODO: Implement polynomial kernel function
+        # @x1 and @x2 are vectors
+        return (1 + np.dot(x1, x2)) ** p
+
     def __gaussianKernel__(self, x1: np.ndarray, x2: np.ndarray, sigma: float) -> float:
         # TODO: Implement gaussian kernel function
         # @x1 and @x2 are vectors
-        return np.exp(-np.linalg.norm(x1-x2, axis = 1)**2 / (2*(sigma**2)))
+        return np.exp(-np.linalg.norm(x1-x2, axis = 0)**2 / (2*(sigma**2)))
     #
-    # def __computeKernelMatrix__(self, x: np.ndarray, kernelFunction, pars) -> np.ndarray:
-    #     # TODO: Implement function to compute the kernel matrix
-    #     # @x is the data matrix
-    #     # @kernelFunction - pass a kernel function (gauss, poly, linear) to this input
-    #     # @pars - pass the possible kernel function parameter to this input
-    #     return K
+    def __computeKernelMatrix__(self, x: np.ndarray, kernelFunction, pars = None) -> np.ndarray:
+        # TODO: Implement function to compute the kernel matrix
+        # @x is the data matrix
+        # @kernelFunction - pass a kernel function (gauss, poly, linear) to this input
+        # @pars - pass the possible kernel function parameter to this input
+        # Gram matrix
+        m, n = x.shape
+
+        K = np.zeros((n, n))
+
+        for i, X in enumerate(x.T):
+            for j, Y in enumerate(x.T):
+                K[i, j] = kernelFunction(X, Y, pars)
+        return K
 
     def train(self, x: np.ndarray, y: np.ndarray, kernel=None, kernelpar=2) -> None:
         # TODO: Implement the remainder of the svm training function
@@ -56,21 +65,40 @@ class SVM(object):
 
         #x = x.T
 
-        print(x.shape)
-        print(y.shape)
+
 
         y = y.reshape(1, -1) * 1.
 
 
         #H = np.outer(y.T, y) * self.__linearKernel__(x1 = x, x2 = y)
 
+
+        # def lin_kern(x1: np.ndarray, x2: np.ndarray) -> float:
+        #     # TODO: Implement linear kernel function
+        #     # @x1 and @x2 are vectors
+        #     return np.dot(x1, x2)
+        #
+        # def poly_kern(x1: np.ndarray, x2: np.ndarray, p: int) -> float:
+        #     # TODO: Implement polynomial kernel function
+        #     # @x1 and @x2 are vectors
+        #     return (1 + np.dot(x1, x2)) ** p
+
+
+        # Gram matrix
+        # K = np.zeros((n, n))
+        # for i in range(n):
+        #     for j in range(n):
+        #         K[i,j] = poly_kern(x1 = x.T[i], x2 = x.T[j], p = 2)
+        #         print("kij is: ", K[i,j])
+
+
+
         H = np.outer(y.T, y) * np.dot(x.T, x)
-
-        print("np.outer shape is: ", np.outer(y.T, y).shape)
-
+        #H = np.outer(y.T, y) * K
 
 
-        print("shape of H", H.shape)
+
+
 
         # Converting into cvxopt format
         P = cvx.matrix(H)
@@ -81,46 +109,51 @@ class SVM(object):
         A = cvx.matrix(y)
         b = cvx.matrix(np.zeros(1))
 
-        print("shape of A:", y.reshape(-1, m).shape)
-
-        def lin_kern(x1: np.ndarray, x2: np.ndarray) -> float:
-            # TODO: Implement linear kernel function
-            # @x1 and @x2 are vectors
-            return np.dot(x1, x2)
-
-
-        # Gram matrix
-        K = np.zeros((n, n))
-        for i in range(n):
-            for j in range(n):
-                K[i,j] = lin_kern(x1 = x.T[i], x2 = x.T[j])
 
 
 
 
-
-
-
+        # print("k shape is: ", K.shape)
+        # print("h shape", np.dot(x.T, x).shape)
+        # print(K)
+        # print(np.dot(x.T, x))
 
 
         # we'll solve the dual
         #https://xavierbourretsicotte.github.io/SVM_implementation.html
 
         #commented out for solving the linear SVM, only needed for the Kernel SVM implementation (2)
-        # # obtain the kernel
-        # if kernel == 'linear':
-        #     # TODO: Compute the kernel matrix for the non-linear SVM with a linear kernel
-        #     print('Fitting SVM with linear kernel')
-        #     K = ???
-        #     self.kernel = self.__linearKernel__
-        # elif kernel == 'poly':
-        #     # TODO: Compute the kernel matrix for the non-linear SVM with a polynomial kernel
-        #     print('Fitting SVM with Polynomial kernel, order: {}'.format(kernelpar))
-        #     K = ???
-        # elif kernel == 'rbf':
-        #     # TODO: Compute the kernel matrix for the non-linear SVM with an RBF kernel
-        #     print('Fitting SVM with RBF kernel, sigma: {}'.format(kernelpar))
-        #     K = ???
+        # obtain the kernel
+        if kernel == 'linear':
+            # TODO: Compute the kernel matrix for the non-linear SVM with a linear kernel
+            print('Fitting SVM with linear kernel')
+            #K = ???
+            self.kernel = self.__linearKernel__
+            print("x shape is: ", x.shape)
+            K = self.__computeKernelMatrix__(x = x, kernelFunction=self.kernel)
+            H = np.outer(y.T, y) * K
+            P = cvx.matrix(H)
+
+
+
+        elif kernel == 'poly':
+            # TODO: Compute the kernel matrix for the non-linear SVM with a polynomial kernel
+            print('Fitting SVM with Polynomial kernel, order: {}'.format(kernelpar))
+
+            # TODO: Compute the kernel matrix for the non-linear SVM with a linear kernel
+            print('Fitting SVM with linear kernel')
+            #K = ???
+            self.kernel = self.__polynomialKernel__
+            K = self.__computeKernelMatrix__(x = x, kernelFunction=self.kernel, pars = self.kernelpar)
+            H = np.outer(y.T, y) * K
+            P = cvx.matrix(H)
+        elif kernel == 'rbf':
+            # TODO: Compute the kernel matrix for the non-linear SVM with an RBF kernel
+            print('Fitting SVM with RBF kernel, sigma: {}'.format(kernelpar))
+            self.kernel = self.__gaussianKernel__
+            K = self.__computeKernelMatrix__(x = x, kernelFunction=self.kernel, pars = self.kernelpar)
+            H = np.outer(y.T, y) * K
+            P = cvx.matrix(H)
         # else:
         #     print('Fitting linear SVM')
         #     # TODO: Compute the kernel matrix for the linear SVM
@@ -143,16 +176,15 @@ class SVM(object):
 
 
         #compute w
-        print("shape y", y.shape)
-        print("shape x", x.shape)
-        print("lambdas shape: ", lambdas.shape)
-        print("shape 1", ((y.T * lambdas).T).shape)
+        # print("shape y", y.shape)
+        # print("shape x", x.shape)
+        # print("lambdas shape: ", lambdas.shape)
+        # print("shape 1", ((y.T * lambdas).T).shape)
         w = ((y.T * lambdas).T @ x.T).reshape(-1, 1)
 
         #select lambdas that are not zero
         indices = (lambdas > 1e-5).flatten()
 
-        print("support vecotrs are: ", lambdas[indices])
 
 
 
@@ -160,8 +192,6 @@ class SVM(object):
         b = y.T[indices] - np.dot(x.T[indices], w)
         b = np.mean(b)
 
-        print("support vectors are, ", x.T[indices])
-        print("support vector labels are", y.T[indices])
 
         self.all_lambdas = lambdas
 
@@ -197,7 +227,6 @@ class SVM(object):
         '''
         # TODO: Implement
         project = np.dot(x.T, self.w) + self.bias
-        print("project is:, ", project)
         prediction = np.sign(project)
         return prediction
 
@@ -224,6 +253,9 @@ class SVM(object):
         :return: List of classification values (-1.0 or 1.0)
         '''
         # TODO: Implement
+
+
+
         #return ???
         pass
 
