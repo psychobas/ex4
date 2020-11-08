@@ -38,10 +38,12 @@ class SVM(object):
         # TODO: Implement the remainder of the svm training function
         self.kernelpar = kernelpar
 
-        x = x.T
+        #x = x.T
 
 
-        n, m = x.shape
+        #n, m = x.shape
+
+        m, n = x.shape
 
         # Gram matrix
         K = np.zeros((n, n))
@@ -52,7 +54,7 @@ class SVM(object):
         #calculate kernel
 
 
-        x = x.T
+        #x = x.T
 
         print(x.shape)
         print(y.shape)
@@ -81,6 +83,25 @@ class SVM(object):
         b = cvx.matrix(np.zeros(1))
 
         print("shape of A:", y.reshape(-1, m).shape)
+
+        def lin_kern(x1: np.ndarray, x2: np.ndarray) -> float:
+            # TODO: Implement linear kernel function
+            # @x1 and @x2 are vectors
+            return np.dot(x1, x2)
+
+
+        # Gram matrix
+        K = np.zeros((n, n))
+        for i in range(n):
+            for j in range(n):
+                K[i,j] = lin_kern(x1 = x.T[i], x2 = x.T[j])
+
+        print("K is", K)
+        print("H is: ", H)
+
+        print(sum(K.flatten() == H.flatten()))
+        print(K.shape)
+        print(H.shape)
 
 
 
