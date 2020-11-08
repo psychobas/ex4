@@ -107,7 +107,8 @@ class SVM(object):
 
         # solve
         solution = cvx.solvers.qp(P, q, G, h, A, b)
-        alphas = np.array(solution['x'])
+        lambdas = np.array(solution['x'])
+        print("lambdas are, ", lambdas)
 
 
 
@@ -144,6 +145,30 @@ class SVM(object):
             G = None
             h = None
 
+
+        #compute w
+        print("shape y", y.shape)
+        print("shape x", x.shape)
+        print("lambdas shape: ", lambdas.shape)
+        print("shape 1", ((y.T * lambdas).T).shape)
+        w = ((y.T * lambdas).T @ x.T).reshape(-1, 1)
+        print("w flatten is", w.flatten())
+
+        print("w is: ", w)
+
+        #select lambdas that are not zero
+        indices = (lambdas > 1e-5).flatten()
+        print("s is: ", indices)
+
+
+
+        #compute b
+        b = y.T[indices] - np.dot(x.T[indices], w)
+        b = np.mean(b)
+
+        print("b is: ", b)
+
+        print("w works")
 
         # TODO: Compute below values according to the lecture slides
         self.lambdas = None # Only save > 0
