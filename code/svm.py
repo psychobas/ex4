@@ -69,16 +69,15 @@ class SVM(object):
         print("np.outer shape is: ", np.outer(y.T, y).shape)
 
 
-        print("outer is,", H)
 
         print("shape of H", H.shape)
 
         # Converting into cvxopt format
         P = cvx.matrix(H)
         q = cvx.matrix(-np.ones((n, 1)))
-        G = cvx.matrix(-np.eye(n))
+
         #h = cvx.matrix(np.zeros((n, 1)))
-        h = cvx.matrix(np.zeros(n))
+
         A = cvx.matrix(y)
         b = cvx.matrix(np.zeros(1))
 
@@ -96,19 +95,9 @@ class SVM(object):
             for j in range(n):
                 K[i,j] = lin_kern(x1 = x.T[i], x2 = x.T[j])
 
-        print("K is", K)
-        print("H is: ", H)
-
-        print(sum(K.flatten() == H.flatten()))
-        print(K.shape)
-        print(H.shape)
 
 
 
-        # solve
-        solution = cvx.solvers.qp(P, q, G, h, A, b)
-        lambdas = np.array(solution['x'])
-        print("lambdas are, ", lambdas)
 
 
 
@@ -138,12 +127,19 @@ class SVM(object):
         #     K = ???
         #
         if self.C is None:
-            G = None
-            h = None
+            G = cvx.matrix(-np.eye(n))
+            h = cvx.matrix(np.zeros(n))
         else:
             print("Using Slack variables")
             G = None
             h = None
+
+
+
+
+        # solve
+        solution = cvx.solvers.qp(P, q, G, h, A, b)
+        lambdas = np.array(solution['x'])
 
 
         #compute w
@@ -152,13 +148,11 @@ class SVM(object):
         print("lambdas shape: ", lambdas.shape)
         print("shape 1", ((y.T * lambdas).T).shape)
         w = ((y.T * lambdas).T @ x.T).reshape(-1, 1)
-        print("w flatten is", w.flatten())
-
-        print("w is: ", w)
 
         #select lambdas that are not zero
         indices = (lambdas > 1e-5).flatten()
-        print("s is: ", indices)
+
+        print("support vecotrs are: ", lambdas[indices])
 
 
 
@@ -166,18 +160,19 @@ class SVM(object):
         b = y.T[indices] - np.dot(x.T[indices], w)
         b = np.mean(b)
 
-        print("b is: ", b)
+        print("support vectors are, ", x.T[indices])
+        print("support vector labels are", y.T[indices])
 
-        print("w works")
+        self.all_lambdas = lambdas
 
         # TODO: Compute below values according to the lecture slides
-        self.lambdas = None # Only save > 0
-        self.sv = None # List of support vectors
-        self.sv_labels = None # List of labels for the support vectors (-1 or 1 for each support vector)
+        self.lambdas = lambdas[indices]
+        self.sv = x.T[indices] # List of support vectors
+        self.sv_labels = y.T[indices] # List of labels for the support vectors (-1 or 1 for each support vector)
         if kernel is None:
-          self.w = None # SVM weights used in the linear SVM
+          self.w = w # SVM weights used in the linear SVM
           # Use the mean of all support vectors for stability when computing the bias (w_0)
-          self.bias = None # Bias
+          self.bias = b # Bias
         else:
           self.w = None
           # Use the mean of all support vectors for stability when computing the bias (w_0).
@@ -185,11 +180,13 @@ class SVM(object):
           self.bias = None # Bias
 
         # TODO: Implement the KKT check
+        self.y = y
         self.__check__()
 
     def __check__(self) -> None:
         # Checking implementation according to KKT2 (Linear_classifiers slide 46)
-        kkt2_check = None
+        kkt2_check = np.dot(self.y, self.all_lambdas)
+        print("kkt2_check is", kkt2_check)
         assert kkt2_check < self.__TOL, 'SVM check failed - KKT2 condition not satisfied'
 
     def classifyLinear(self, x: np.ndarray) -> np.ndarray:
@@ -199,8 +196,11 @@ class SVM(object):
         :return: List of classification values (-1.0 or 1.0)
         '''
         # TODO: Implement
-        #return ???
-        pass
+        project = np.dot(x.T, self.w) + self.bias
+        print("project is:, ", project)
+        prediction = np.sign(project)
+        return prediction
+
 
     def printLinearClassificationError(self, x: np.ndarray, y: np.ndarray) -> None:
         '''
@@ -209,7 +209,13 @@ class SVM(object):
         :param y: Ground truth labels
         '''
         # TODO: Implement
-        print("Total error: {:.2f}%".format(result))
+        classification = self.classifyLinear(x)
+        print("correct", sum(classification == y.T) / y.T.shape[0])
+        result = 1 - sum(classification == y.T) / y.T.shape[0]
+
+
+        print("Total error: {:.2f}%".format(result[0]))
+
 
     def classifyKernel(self, x: np.ndarray) -> np.ndarray:
         '''
@@ -227,5 +233,8 @@ class SVM(object):
         :param x: Data to be classified
         :param y: Ground truth labels
         '''
+
+
         # TODO: Implement
-        print("Total error: {:.2f}%".format(result))
+        #print("Total error: {:.2f}%".format(result))
+        pass
